@@ -1,11 +1,12 @@
 import glob
 import os
-from time import sleep, time
+from time import sleep
 from bs4 import BeautifulSoup
-from isort import file
 import requests
 import yaml
-import re
+
+import utility.io as io
+from utility.helpers import convert_time, get_child_string
 
 
 def get_teams(region_files):
@@ -101,68 +102,46 @@ def get_results(meet_files, team_pages):
     return results
 
 
-def results_to_file(results):
-    f = open("data/meet_results.data", "w")
-    for meet, result in results.items():
+def results_to_file(results, edge_between_all):
+    """
+    """
+    meet_results_filename = io.get_graph_filename(config)
+    f = open(meet_results_filename, "w")
+    for _, result in results.items():
 
-        #"""
-        for first in result:
-            for second in result:
-                if first[2] < second[2]:
-                    first_node = first[0].replace(' ', '')
-                    second_node = second[0].replace(' ', '')
-                    time_diff = second[2] - first[2]
+        if edge_between_all:
+            for first in result:
+                for second in result:
+                    if first[2] < second[2]:
+                        first_node = first[0].replace(' ', '')
+                        second_node = second[0].replace(' ', '')
+                        time_diff = second[2] - first[2]
 
-                    line = "{} {} {:.1f}\n".format(second_node, first_node, time_diff)
-                    f.write(line)
-        """
+                        line = "{} {} {:.1f}\n".format(second_node, first_node, time_diff)
+                        f.write(line)
+        else:
+            for i in range(len(result) - 1):
+                first = result[i]
+                second = result[i + 1]
 
-        for i in range(len(result) - 1):
-            first = result[i]
-            second = result[i + 1]
+                first_node = first[0].replace(' ', '')
+                second_node = second[0].replace(' ', '')
+                time_diff = second[2] - first[2]
 
-            first_node = first[0].replace(' ', '')
-            second_node = second[0].replace(' ', '')
-            time_diff = second[2] - first[2]
-
-            line = "{} {} {:.1f}\n".format(second_node, first_node, time_diff)
-            f.write(line)
-        #"""
+                line = "{} {} {:.1f}\n".format(second_node, first_node, time_diff)
+                f.write(line)
     f.close()
 
 
-def get_child_string(s):
-    """
-    Assumes that this tree has a string in the child, otherwise will throw AttributeError
-    """
-    while s.string is None:
-        s = s.findChild() 
-    
-    return s.string.strip()
-
-
-def convert_time(final_time):
-    """
-    Convert time from MM:SS.s format to double representing number of seconds
-    """
-    if re.match("^\d+:\d+\.\d+$", final_time):
-        colon = final_time.index(':')
-
-        minutes = float(final_time[0:colon])
-        seconds = float(final_time[colon+1:])
-        
-        return 60 * minutes + seconds
-
-
-def get_and_save_all_pages():
+def get_and_save_all_pages(config):
     """
     """
     # Use Downloaded Region HTMLs
-    region_files = glob.glob("data/regions/*")
+    region_files = glob.glob(io.get_regions_dir(config))
 
     teams = get_teams(region_files)
     for team, team_url in teams.items():
-        filename = "data/teams/{}.html".format(''.join(filter(str.isalnum, team))) 
+        filename = io.get_team_filename(config, team) 
         if not os.path.exists(filename):
             print(f"Saving team {team} at {filename}")
 
@@ -170,15 +149,16 @@ def get_and_save_all_pages():
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(html)
 
-            sleep(10)
+            sleep(config['scraper_wait_time'])
         else:
             print(f"Alread saved team {team} at {filename}")
     
-    team_files = glob.glob("data/teams/*")
-
-    meets = get_meets(team_files, "2021")
-    for meet, (meet_date, meet_url) in meets.items():
-        filename = "data/meets/{}.html".format(''.join(filter(str.isalnum, meet))) 
+    team_files = glob.glob(io.get_teams_dir(config))
+    
+    year = config['year']
+    meets = get_meets(team_files, year)
+    for meet, (_, meet_url) in meets.items():
+        filename = io.get_meet_filename(config, meet)
         if not os.path.exists(filename):
             print(f"Saving meet {meet} at {filename}")
 
@@ -186,24 +166,28 @@ def get_and_save_all_pages():
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(html)
 
-            sleep(10)
+            sleep(config['scraper_wait_time'])
         else:
             print(f"Already saved meet {meet} at {filename}")
 
 
 if __name__ == "__main__":
     """
+    Scrape all of the data and create appropriate graph
     """
     config = yaml.safe_load(open('config.yml'))
-    year = config["year"]
+
+    edge_between_all = config["edge_between_all"]
 
     # Save HTML Pages where necessary
-    # get_and_save_all_pages()
+    get_and_save_all_pages(config)
 
-    region_files = glob.glob("data/regions/*")
-    teams = get_teams(region_files)
+    regions_dir = io.get_regions_dir(config)
+    regions_files = glob.glob(regions_dir)
+    teams = get_teams(regions_files)
 
-    meet_files = glob.glob("data/meets/*")
-    results = get_results(meet_files, teams)
+    meets_dir = io.get_meets_dir(config)
+    meets_files = glob.glob(meets_dir)
+    results = get_results(meets_files, teams)
 
-    results_to_file(results)
+    results_to_file(results, edge_between_all)

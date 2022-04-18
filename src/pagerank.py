@@ -2,6 +2,10 @@ import networkx as nx
 import operator
 import random
 
+import yaml
+
+import utility.io as io
+
 
 def pageranks_walk(G, numIter):
     visits = {}
@@ -54,22 +58,31 @@ def pageranks_calc(G, numIter):
 
 
 if __name__ == "__main__":
-    G = nx.read_weighted_edgelist("meet_results.data", create_using=nx.DiGraph())
+    """
+    Read in graph data produced and run pagerank algorithm
+    """
+    config = yaml.safe_load(open('config.yml'))
 
-    '''
-    D = nx.MultiDiGraph()
-    for e in G.edges():
-        E = G.get_edge_data(e[0],e[1])
+    graph_filename = io.get_graph_filename(config)
+    
+    G = nx.read_weighted_edgelist(graph_filename, create_using=nx.DiGraph())
 
-        D.add_edge(e[0], e[1])
+    if config['weight_time_difference']:
+        D = nx.MultiDiGraph()
 
-        for i in range(int(10 * E['weight'])):
+        for e in G.edges():
+            E = G.get_edge_data(e[0],e[1])
+
             D.add_edge(e[0], e[1])
-    '''
+
+            for i in range(int(E['weight'])):
+                D.add_edge(e[0], e[1])
+        
+        G = D
 
     p = pageranks_walk(G, 1000000)
     p = sorted(p.items(), key=operator.itemgetter(1), reverse=True)
 
     for i, (runner, score) in enumerate(p[0:50]):
-        print(i + 1, runner, score)
+        print(f"{i + 1}: {runner}")
 

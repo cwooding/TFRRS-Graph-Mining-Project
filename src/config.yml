@@ -1,3 +1,11 @@
+edge_between_all: True
 gender: "m"
-year: "2021"
+get_and_save_pages: False
 scraper_wait_time: 10
+weight_time_difference: True
+year: "2021"
+
+file:
+  data_dir: "data"
+  division_dir: "d3"
+  graph_filename: "meet_results.data"
