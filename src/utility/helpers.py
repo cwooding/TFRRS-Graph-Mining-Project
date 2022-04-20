@@ -13,6 +13,20 @@ def get_child_string(s):
     return s.string.strip()
 
 
+def get_table_name(table):
+    """
+    Get the table name from the given table.  Should be an h3 header, 
+    otherwise it is a bad results table.
+    """
+    table_name = table.parent.find("h3")
+    if table_name:
+        table_name = next(table_name.children)
+    else:
+        table_name = ""
+
+    return table_name
+
+
 def convert_time(final_time):
     """
     Convert time from MM:SS.s format to double representing number of seconds
@@ -24,3 +38,9 @@ def convert_time(final_time):
         seconds = float(final_time[colon+1:])
         
         return 60 * minutes + seconds
+
+
+def remove_white_space(s):
+    """
+    """
+    return re.sub(r"[\n\t\s]*", "", s)

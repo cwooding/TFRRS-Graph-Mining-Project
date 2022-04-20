@@ -11,6 +11,17 @@ def create_dirs(dir):
         os.makedirs(dir)
 
 
+def get_conference_dir(config):
+    """
+    Return the conference directory
+    """
+    conference_dir = os.path.join(config['file']['data_dir'], config['file']['division_dir'], "conference")
+    
+    create_dirs(conference_dir)
+    
+    return os.path.join(conference_dir, "*")
+
+
 def get_meets_dir(config, filename="*"):
     """
     Return the meets directory
@@ -20,17 +31,6 @@ def get_meets_dir(config, filename="*"):
     create_dirs(meets_dir)
     
     return os.path.join(meets_dir, filename)
-
-
-def get_regions_dir(config):
-    """
-    Return the regions directory
-    """
-    regions_dir = os.path.join(config['file']['data_dir'], config['file']['division_dir'], "regions")
-    
-    create_dirs(regions_dir)
-    
-    return os.path.join(regions_dir, "*")
 
 
 def get_teams_dir(config, filename="*"):
@@ -46,6 +46,7 @@ def get_teams_dir(config, filename="*"):
 
 def get_team_filename(config, team):
     """
+    Get the team html filename in respective directory
     """
     filename = "{}.html".format(''.join(filter(str.isalnum, team)))
 
@@ -54,6 +55,7 @@ def get_team_filename(config, team):
 
 def get_meet_filename(config, meet):
     """
+    Get the meet html filename in respective directory
     """
     filename = "{}.html".format(''.join(filter(str.isalnum, meet)))
 
@@ -62,9 +64,21 @@ def get_meet_filename(config, meet):
 
 def get_graph_filename(config):
     """
+    Get the resulting graph file name for pagerank
     """
     dir = os.path.join(config['file']['data_dir'], config['file']['division_dir'])
 
     create_dirs(dir)
 
     return os.path.join(dir, config['file']['graph_filename'])
+
+
+def get_championship_filename(config):
+    """
+    """
+    dir = os.path.join(config['file']['data_dir'], config['file']['division_dir'], "championship")
+    filename = "{}-championship.html".format(config['file']['division_dir'])
+
+    create_dirs(dir)
+
+    return os.path.join(dir, filename)

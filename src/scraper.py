@@ -1,18 +1,21 @@
 import glob
 import os
+import re
 from time import sleep
 from bs4 import BeautifulSoup
 import requests
 import yaml
 
 import utility.io as io
-from utility.helpers import convert_time, get_child_string
+from utility.helpers import convert_time, get_child_string, get_table_name, remove_white_space
 
 
 def get_teams(region_files):
     """
     Find Teams in a League HTML Page
     """
+    print("Getting all teams.")
+
     team_pages = dict()
     for region_file in region_files:
         region_page = open(region_file, "r")
@@ -35,6 +38,8 @@ def get_meets(team_files, year):
     """
     Find meets on a team HTML Page
     """
+    print("Getting all meets.")
+
     meets = {}
     for team_file in team_files:
         team_page = open(team_file, "r")
@@ -68,8 +73,9 @@ def get_results(meet_files, team_pages):
     """
     Get the results from all of the meets
     """
-    results = {}
+    print("Getting all meet results.")
 
+    results = {}
     for meet_file in meet_files:
         meet_result = []
 
@@ -77,7 +83,7 @@ def get_results(meet_files, team_pages):
         doc = BeautifulSoup(meet_page, "html.parser")
 
         for table in doc.find_all('table'):
-            table_name = next(table.parent.find("h3").children)
+            table_name = get_table_name(table)
 
             if "Men" in table_name and "Individual" in table_name:
                 column_names = [column.string.strip() for column in table.find('thead').find_all('th')]
@@ -92,7 +98,7 @@ def get_results(meet_files, team_pages):
                     team = get_child_string(row[team_index])
                     final_time = convert_time(get_child_string(row[time_index]))
 
-                    # If they finished the race and in the teams we are looking
+                    # If they finished the race and in the teams we are looking for
                     if final_time and team in team_pages:
                         meet_result.append((name, team, final_time))
 
@@ -102,19 +108,68 @@ def get_results(meet_files, team_pages):
     return results
 
 
-def results_to_file(results, edge_between_all):
+def get_championship_results(championship_meet_file):
+    """
+    Get the results from all of the meets
+    """
+    individual_result = {}
+    team_result = {}
+
+    meet_page = open(championship_meet_file, "r")
+    doc = BeautifulSoup(meet_page, "html.parser")
+
+    for table in doc.find_all('table'):
+        table_name = get_table_name(table)
+
+        if "Men" in table_name and "Individual" in table_name:
+            column_names = [column.string.strip() for column in table.find('thead').find_all('th')]
+            name_index = column_names.index('NAME')
+            team_index = column_names.index('TEAM')
+            time_index = column_names.index('TIME')
+
+            for row in table.find('tbody').find_all('tr'):
+                row = row.find_all('td')
+                       
+                name = remove_white_space(get_child_string(row[name_index]))
+                team = remove_white_space(get_child_string(row[team_index]))
+                final_time = convert_time(get_child_string(row[time_index]))
+
+                # If they finished the race and in the teams we are looking for
+                if final_time:
+                    individual_result[name] = (team, final_time)
+        elif "Men" in table_name and "Team" in table_name:
+            column_names = [column.string.strip() for column in table.find('thead').find_all('th')]
+            team_index = column_names.index('Team')
+            score_index = column_names.index('Score')
+
+            for row in table.find('tbody').find_all('tr'):
+                row = row.find_all('td')
+                       
+                team = remove_white_space(get_child_string(row[team_index]))
+                score = get_child_string(row[score_index])
+
+                team_result[team] = (team, score)
+
+    meet_page.close()
+
+    return individual_result, team_result
+
+
+def results_to_file(config, results):
     """
     """
+    print("Converting meet results to graph edge list")
+
     meet_results_filename = io.get_graph_filename(config)
     f = open(meet_results_filename, "w")
     for _, result in results.items():
 
-        if edge_between_all:
+        if config['edge_between_all']:
             for first in result:
                 for second in result:
                     if first[2] < second[2]:
-                        first_node = first[0].replace(' ', '')
-                        second_node = second[0].replace(' ', '')
+                        first_node = remove_white_space(first[0])
+                        second_node = remove_white_space(second[0])
                         time_diff = second[2] - first[2]
 
                         line = "{} {} {:.1f}\n".format(second_node, first_node, time_diff)
@@ -124,8 +179,8 @@ def results_to_file(results, edge_between_all):
                 first = result[i]
                 second = result[i + 1]
 
-                first_node = first[0].replace(' ', '')
-                second_node = second[0].replace(' ', '')
+                first_node = remove_white_space(first[0])
+                second_node = remove_white_space(second[0])
                 time_diff = second[2] - first[2]
 
                 line = "{} {} {:.1f}\n".format(second_node, first_node, time_diff)
@@ -136,10 +191,11 @@ def results_to_file(results, edge_between_all):
 def get_and_save_all_pages(config):
     """
     """
-    # Use Downloaded Region HTMLs
-    region_files = glob.glob(io.get_regions_dir(config))
+    print("Getting and saving pages that are not downloaded yet.")
 
-    teams = get_teams(region_files)
+    conference_files = glob.glob(io.get_conference_dir(config))
+
+    teams = get_teams(conference_files)
     for team, team_url in teams.items():
         filename = io.get_team_filename(config, team) 
         if not os.path.exists(filename):
@@ -177,17 +233,14 @@ if __name__ == "__main__":
     """
     config = yaml.safe_load(open('config.yml'))
 
-    edge_between_all = config["edge_between_all"]
+    # Get teams from the conference pages
+    conference_dir = io.get_conference_dir(config)
+    conference_files = glob.glob(conference_dir)
+    teams = get_teams(conference_files)
 
-    # Save HTML Pages where necessary
-    get_and_save_all_pages(config)
-
-    regions_dir = io.get_regions_dir(config)
-    regions_files = glob.glob(regions_dir)
-    teams = get_teams(regions_files)
-
+    # Get all the meets that these teams competed at
     meets_dir = io.get_meets_dir(config)
     meets_files = glob.glob(meets_dir)
     results = get_results(meets_files, teams)
 
-    results_to_file(results, edge_between_all)
+    results_to_file(config, results)

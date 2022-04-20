@@ -1,6 +1,9 @@
 import math
 import random
 import networkx as nx
+import yaml
+
+import utility.io as io
 
 
 """
@@ -114,7 +117,10 @@ if __name__ == "__main__":
     """
     Print bow tie structure and degree stats for given graph
     """
-    D = nx.read_weighted_edgelist("data/d3/meet_results.data", create_using=nx.DiGraph())
+    config = yaml.safe_load(open('config.yml'))
+
+    graph_filename = io.get_graph_filename(config)
+    D = nx.read_weighted_edgelist(graph_filename, create_using=nx.DiGraph())
     
     print("Bow Tie Structure for Meet Results:")
     bow_tie(D)
