@@ -1,10 +1,13 @@
-edge_between_all: True
-gender: "m"
-scraper_wait_time: 1
-weight_time_difference: True
 year: "2021"
+
+edge_between_all: True
+weight_time_difference: True
+only_nationals_runners: True
+
+scraper_wait_time: 1
 
 file:
   data_dir: "data"
   division_dir: "d2"
   graph_filename: "meet_results.data"
+  track_list_filename: "d3_2019.html"

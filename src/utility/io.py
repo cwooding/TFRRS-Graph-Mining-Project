@@ -1,7 +1,5 @@
 import os
 
-from pyrsistent import optional
-
 
 def create_dirs(dir):
     """
@@ -75,9 +73,22 @@ def get_graph_filename(config):
 
 def get_championship_filename(config):
     """
+    Get championship filename
     """
     dir = os.path.join(config['file']['data_dir'], config['file']['division_dir'], "championship")
     filename = "{}-championship.html".format(config['file']['division_dir'])
+
+    create_dirs(dir)
+
+    return os.path.join(dir, filename)
+
+    
+def get_track_list_filename(config):
+    """
+    Get the track list filename
+    """
+    dir = os.path.join(config['file']['data_dir'], "track")
+    filename = config['file']['track_list_filename']
 
     create_dirs(dir)
 

@@ -9,6 +9,8 @@ def get_child_string(s):
     """
     while s.string is None:
         s = s.findChild() 
+        if s is None:
+            return ""
     
     return s.string.strip()
 
@@ -42,5 +44,6 @@ def convert_time(final_time):
 
 def remove_white_space(s):
     """
+    Remove white space from a given string
     """
     return re.sub(r"[\n\t\s]*", "", s)

@@ -10,6 +10,7 @@ from scraper import get_teams, get_meets
 
 def download_all_pages(config):
     """
+    Grab and save all html pages that are not downloaded yet to the configured folder
     """
     print("Getting and saving pages that are not downloaded yet.")
 
@@ -31,8 +32,7 @@ def download_all_pages(config):
     
     team_files = glob.glob(io.get_teams_dir(config))
     
-    year = config['year']
-    meets = get_meets(team_files, year)
+    meets = get_meets(config, team_files)
     for meet, (_, meet_url) in meets.items():
         filename = io.get_meet_filename(config, meet)
         if not os.path.exists(filename):

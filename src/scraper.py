@@ -1,9 +1,5 @@
 import glob
-import os
-import re
-from time import sleep
 from bs4 import BeautifulSoup
-import requests
 import yaml
 
 import utility.io as io
@@ -34,7 +30,7 @@ def get_teams(region_files):
     return team_pages
 
 
-def get_meets(team_files, year):
+def get_meets(config, team_files):
     """
     Find meets on a team HTML Page
     """
@@ -59,9 +55,8 @@ def get_meets(team_files, year):
                         # Issue where downloaded html doesnt have https in html
                         if "https:" not in meet_link:
                             meet_link = "https:" + meet_link
-
                         # Save XC meets from this year
-                        if "xc" in meet_link and year in meet_date:
+                        if "xc" in meet_link and config['year'] in meet_date:
                             meets[meet_name] = (meet_date, meet_link)
         
         team_page.close()
@@ -157,6 +152,7 @@ def get_championship_results(championship_meet_file):
 
 def results_to_file(config, results):
     """
+    Put meet results in a file that can be read by NetworkX to create a graph
     """
     print("Converting meet results to graph edge list")
 
@@ -186,45 +182,6 @@ def results_to_file(config, results):
                 line = "{} {} {:.1f}\n".format(second_node, first_node, time_diff)
                 f.write(line)
     f.close()
-
-
-def get_and_save_all_pages(config):
-    """
-    """
-    print("Getting and saving pages that are not downloaded yet.")
-
-    conference_files = glob.glob(io.get_conference_dir(config))
-
-    teams = get_teams(conference_files)
-    for team, team_url in teams.items():
-        filename = io.get_team_filename(config, team) 
-        if not os.path.exists(filename):
-            print(f"Saving team {team} at {filename}")
-
-            html = requests.get(team_url).text
-            with open(filename, "w", encoding="utf-8") as f:
-                f.write(html)
-
-            sleep(config['scraper_wait_time'])
-        else:
-            print(f"Alread saved team {team} at {filename}")
-    
-    team_files = glob.glob(io.get_teams_dir(config))
-    
-    year = config['year']
-    meets = get_meets(team_files, year)
-    for meet, (_, meet_url) in meets.items():
-        filename = io.get_meet_filename(config, meet)
-        if not os.path.exists(filename):
-            print(f"Saving meet {meet} at {filename}")
-
-            html = requests.get(meet_url).text
-            with open(filename, "w", encoding="utf-8") as f:
-                f.write(html)
-
-            sleep(config['scraper_wait_time'])
-        else:
-            print(f"Already saved meet {meet} at {filename}")
 
 
 if __name__ == "__main__":
